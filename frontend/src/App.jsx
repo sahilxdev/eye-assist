@@ -1,4 +1,4 @@
-import SpeechApp from "./SpeechToTextAndTextToSpeech"
+import SpeechApp from "./Speech"
 
 function App() {
 
