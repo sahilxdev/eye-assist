@@ -3,11 +3,11 @@ import SpeechApp from "./SpeechToTextAndTextToSpeech"
 function App() {
 
   return (
-    <div className="h-screen flex flex-col items-center justify-between p-4">
+    <div className="flex flex-col items-center justify-between p-4 overflow-hidden">
       <h1 className="text-2xl md:text-3xl font-bold text-center bg-slate-200 p-3 rounded-xl border-2 shadow-md">
-        Speech-to-Text & Text-to-Speech App
+        Eye-Assist
       </h1>
-      <SpeechApp />
+      <SpeechApp className="w-full"/>
     </div>
   )
 }
