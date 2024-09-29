@@ -1,10 +1,8 @@
-// src/App.js
 import React, { useState, useEffect, useRef } from 'react';
 
 function SpeechApp() {
   const [text, setText] = useState(''); // Text state for input and speech result
   const [isListening, setIsListening] = useState(false); // State to track whether it's listening or not
-  const [isSpeaking, setIsSpeaking] = useState(false); // State to track if text-to-speech is ongoing
   const recognition = useRef(null); // Use ref to store SpeechRecognition instance
   
   // Set up speech recognition only once (on component mount)
@@ -24,7 +22,7 @@ function SpeechApp() {
     // Handle successful speech recognition
     recognition.current.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      setText(prevText => `${prevText} ${transcript}`); // Append the recognized text to existing text
+      setText(transcript); // Set the recognized text (replacing previous text)
       setIsListening(false); // Stop listening after result
     };
 
@@ -44,58 +42,42 @@ function SpeechApp() {
     if (isListening) {
       recognition.current.stop(); // Stop if already listening
     } else {
+      setText(''); // Clear text when starting new recognition
       recognition.current.start(); // Start listening
       setIsListening(true);
     }
   };
 
-  // Handle Text-to-Speech functionality
-  const handleTextToSpeech = () => {
-    const speechSynthesis = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(text);
+  // Effect to trigger Text-to-Speech when text updates
+  useEffect(() => {
+    if (text) {
+      const speechSynthesis = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(text);
 
-    utterance.lang = 'en-US';
-    setIsSpeaking(true); // Set speaking state while speaking
+      utterance.lang = 'en-US';
 
-    utterance.onend = () => {
-      setIsSpeaking(false); // Reset speaking state after speech ends
-    };
-
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event.error);
-      setIsSpeaking(false); // Reset speaking state on error
-    };
-
-    speechSynthesis.speak(utterance);
-  };
+      // Speak the text
+      speechSynthesis.speak(utterance);
+    }
+  }, [text]); // Run this effect when the text state changes
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
-      <h1 className="text-3xl font-bold mb-4">Speech-to-Text & Text-to-Speech App</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="flex flex-col space-y-4 w-full max-w-md">
+        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+          <button
+            onClick={toggleListening}
+            className={`w-full sm:w-auto px-6 py-3 rounded-lg text-white ${isListening ? 'bg-red-500' : 'bg-blue-500'} hover:bg-opacity-90 transition`}
+          >
+            {isListening ? 'Stop Listening' : 'Start Speech to Text'}
+          </button>
+        </div>
 
-      <textarea
-        rows="8"
-        className="w-full max-w-lg p-4 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Speak or type here..."
-      />
-
-      <div className="space-x-4">
-        <button
-          onClick={toggleListening}
-          className={`px-6 py-3 rounded-lg text-white ${isListening ? 'bg-red-500' : 'bg-blue-500'} hover:bg-opacity-90 transition`}
+        <p
+          className="w-full p-4 mb-4 border border-gray-300 rounded-lg bg-white text-lg text-gray-800"
         >
-          {isListening ? 'Stop Listening' : 'Start Speech to Text'}
-        </button>
-
-        <button
-          onClick={handleTextToSpeech}
-          disabled={isSpeaking} // Disable the button if speaking is ongoing
-          className={`px-6 py-3 rounded-lg text-white ${isSpeaking ? 'bg-gray-500' : 'bg-green-500'} hover:bg-opacity-90 transition`}
-        >
-          {isSpeaking ? 'Speaking...' : 'Text to Speech'}
-        </button>
+          {text}
+        </p>
       </div>
     </div>
   );
