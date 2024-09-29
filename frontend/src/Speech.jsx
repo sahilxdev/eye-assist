@@ -31,6 +31,7 @@ function SpeechApp() {
     recognition.current.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setText(transcript); // Set the recognized text (replacing previous text)
+      console.log(transcript);
       setIsListening(false); // Stop listening after result
     };
 
@@ -72,19 +73,24 @@ function SpeechApp() {
   }, []);
 
   // Function to start the camera
-  const startCamera = async () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+const startCamera = async () => {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+
+        // Add an event listener to play the video only after metadata is loaded
+        videoRef.current.addEventListener('loadedmetadata', () => {
           videoRef.current.play();
-        }
-      } catch (error) {
-        console.error('Error accessing the camera:', error);
+        });
       }
+    } catch (error) {
+      console.error('Error accessing the camera:', error);
     }
-  };
+  }
+};
+
 
   // Handle Speech-to-Text toggle
   const toggleListening = () => {
@@ -201,6 +207,7 @@ function SpeechApp() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
+      {JSON.stringify(text)}
       <div className="flex flex-col items-center justify-between space-y-4 w-full max-w-md">
         <div className="relative w-full h-[240px] mb-4 border border-gray-300 rounded-lg">
           <video ref={videoRef} className="w-full h-full rounded-lg"></video>
