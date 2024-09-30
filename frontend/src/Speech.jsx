@@ -18,6 +18,7 @@ function SpeechApp() {
 
     const fetchUrl = async () => {
       try {
+        console.log("Fetching URL...");
         const response = await axios.get("https://url-store-4bt0.onrender.com/");
         console.log("Fetched URL:", response.data.url);
         setPostUrl(response.data.url);
@@ -29,9 +30,11 @@ function SpeechApp() {
     fetchUrl();
   }, []);
 
-  // Trigger camera and speech recognition initialization only after postUrl is set
   useEffect(() => {
-    if (!postUrl) return; // Wait until postUrl is set
+    if (!postUrl) {
+      console.log("Waiting for postUrl to be set...");
+      return;
+    }
 
     console.log("Post URL is set, initializing...");
 
@@ -52,10 +55,9 @@ function SpeechApp() {
       console.log("Speech recognized:", transcript);
       setText(transcript);
     
-      processText(transcript); // Pass transcript directly to processText
+      processText(transcript);
     };
         
-
     recognition.current.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
@@ -64,12 +66,13 @@ function SpeechApp() {
     recognition.current.onend = () => {
       console.log("Speech recognition ended");
       setIsListening(false);
-      captureImage(); // Only capture the image when speech recognition ends
+      captureImage();
     };
 
     startCamera();
 
     return () => {
+      console.log("Cleaning up camera...");
       if (videoRef.current) {
         const stream = videoRef.current.srcObject;
         if (stream) {
@@ -106,8 +109,10 @@ function SpeechApp() {
 
     console.log("Toggling listening state");
     if (isListening) {
+      console.log("Stopping speech recognition");
       recognition.current.stop();
     } else {
+      console.log("Starting speech recognition");
       setText('');
       recognition.current.start();
       setIsListening(true);
@@ -126,11 +131,12 @@ function SpeechApp() {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
   
       const imageData = canvas.toDataURL('image/png');
-      setImage(imageData);  // Set the image data in state
+      setImage(imageData);
       console.log("Image captured");
   
-      if (command) {  // Ensure command is available before proceeding
-        handleSubmit(command, imageData);  // Pass both command and imageData to handleSubmit
+      if (command) {
+        console.log("Command available, submitting...");
+        handleSubmit(command, imageData);
       } else {
         console.error("No valid command found to submit.");
       }
@@ -138,32 +144,27 @@ function SpeechApp() {
       console.error("Canvas or video not available for capturing image.");
     }
   }, [command]);
-  
-  
-  
 
   const processText = useCallback((inputText) => {
     console.log("Processing recognized text:", inputText);
     const keyword = findKeywords(inputText);
     console.log("Keyword found:", keyword);
   
-    if (postUrl) {  // Make sure postUrl is available before processing
+    if (postUrl) {
       const newCommand = getUrlForKeyword(keyword);
       console.log("New command:", newCommand);
-      setCommand(newCommand);  // Set the command
+      setCommand(newCommand);
     } else {
       console.error("Post URL is not set yet. Waiting for URL to be fetched.");
     }
   }, [postUrl]);
   
-  // useEffect to capture image after the command is set
   useEffect(() => {
-    if (command) {  // If command is available, capture image
+    if (command) {
+      console.log("Command set, triggering image capture");
       captureImage();
     }
   }, [command, captureImage]);
-  
-  
 
   function findKeywords(inputString) {
     console.log("Finding keywords in:", inputString);
@@ -196,22 +197,31 @@ function SpeechApp() {
       return null;
     }
     if (keyword === "see") {
+      console.log("Setting level to 0");
       setLevel(0);
       return `${postUrl}/describe`;
     } else if (keyword === "see detail") {
+      console.log("Setting level to 1");
       setLevel(1);
       return `${postUrl}/describe`;
     } else if (keyword === "see more detail") {
+      console.log("Setting level to 2");
       setLevel(2);
       return `${postUrl}/describe`;
     } else if (keyword === "read") {
       return `${postUrl}/ocr`;
     } else {
+      console.log("No matching keyword found");
       return null;
     }
   }
-
+  
   const handleSubmit = useCallback((command, image) => {
+    console.log("Handling submit");
+    console.log("Command:", command);
+    console.log("Image data length:", image ? image.length : "No image");
+    console.log("Level:", level);
+  
     if (!image) {
       console.error("No image captured for submission.");
       return;
@@ -222,31 +232,47 @@ function SpeechApp() {
       return;
     }
   
-    // Now that we have both command and image, proceed with the submission logic
-    console.log("Handling submit");
-    const payload = {
-      command: command,
-      image: image,
-      level: level  // Include the captured image in the payload
-    };
+    const formData = new FormData();
+    
+    // Check if image is already a Blob or File
+    if (image instanceof Blob || image instanceof File) {
+      formData.append('image', image, 'image.jpg');
+    } else {
+      // If image is base64 string, convert it to Blob
+      fetch(image)
+        .then(res => res.blob())
+        .then(blob => {
+          formData.append('image', blob, 'image.jpg');
+          sendFormData(command, formData);
+        })
+        .catch(error => {
+          console.error("Error converting image to Blob:", error);
+        });
+      return; // Exit early as we're handling the submission in the Promise chain
+    }
+    
+    formData.append('level', level);
   
-    // Send the payload to the server
+    sendFormData(command, formData);
+  }, [level]);
+  
+  const sendFormData = (command, formData) => {
+    console.log("Sending form data to server");
     fetch(command, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: formData,
     })
-    .then(response => response.json())
+    .then(response => {
+      console.log("Server response received");
+      return response.json();
+    })
     .then(data => {
       console.log("Submission successful:", data);
     })
     .catch(error => {
       console.error("Submission failed:", error);
     });
-  }, []);
-  
+  };
 
   useEffect(() => {
     if (result) {
